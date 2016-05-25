@@ -1,0 +1,34 @@
+{
+        "name"          : "kroc/DOMSerialize"
+,       "description"   : ""
+,       "keywords"      : ["dom", "tests", "xml", "xpath"]
+,       "homepage"      : "https://github.com/Kroc/css2xpath"
+,       "license"       : "BSD-2-Clause"
+,       "authors"       : [
+                                {
+                                        "name"          : "Kroc Camen"
+                                ,       "email"         : "kroc@camendesign.com"
+                                ,       "homepage"      : "http://camendesign.com"
+                                ,       "role"          : "Developer"
+                                }
+                        ]
+,       "support"       : {
+                                "email"         : "kroc+domserialize@camendesign.com"
+                        ,       "issues"        : "https://github.com/Kroc/DOMSerialize/issues"
+                        ,       "source"        : "https://github.com/Kroc/DOMSerialize"
+                        }
+        
+,       "require"       : {
+                                "ext-pcre"      : ">=7.2"
+                        }
+                        
+,       "autoload"      : {
+                                "files" : [
+                                                "src/domserialize.php"
+                                        ]
+                        }
+                        
+,       "require-dev"   : {
+                                "phpunit/phpunit"               : "5.0.*"
+                        }
+}
