@@ -1,6 +1,6 @@
 <?php
 /**
- * Serialize & deserialize XML into a simplified, consistent single string format.
+ * Serialize & deserialize XML into a simplified, consistent single-string format.
  *
  * @copyright   Copyright 2016, Kroc Camen, all rights reserved
  * @author      Kroc Camen <kroc@camendesign.com>
@@ -18,7 +18,7 @@
  * An element begins and ends with angled brackets,
  * with the tag name (and namespace if present) within:
  *
- *      <e><ns:e>     - equivalent to `<e /><ns:e />`
+ *      <e> <ns:e>      - equivalent to `<e /><ns:e />`
  *
  * Attributes are space-separated and prefixed with an "@" sigil:
  *
@@ -34,13 +34,19 @@
  */
 
 /**
+ * should you modify this project for your own use (rather than say, contributing back to the original)
+ * you MUST change this namespace to use your own name; likewise, check "composer.json"
+*/
+namespace kroc\domserialize;
+
+/**
  * The extended `DOMDocument` (XML document class) with our added [de]serialization capabilities.
  * It is a PHP requirement that nodes being attached to a document must come from the same document
  * (i.e. the nodes must be created using the original document, and then attached);
  * this is why a subclass of DOMDocument is provided to work through.
  */
 class DOMDocumentSerialize
-        extends DOMDocument
+        extends \DOMDocument
 {
         //to do XPath queries, we'll need a DOMXPath object
         //which has to be bound to the particular Document instance
@@ -59,9 +65,9 @@ class DOMDocumentSerialize
                 //now register our class extensions for the various node types
                 //(it's theoretically possible for this to fail, so we check for that)
                 if (
-                        ($this->registerNodeClass( 'DOMElement', 'DOMElementSerialize' ) === false)
-                     || ($this->registerNodeClass( 'DOMAttr',    'DOMAttrSerialize'    ) === false)
-                     || ($this->registerNodeClass( 'DOMText',    'DOMTextSerialize'    ) === false)
+                        ($this->registerNodeClass( '\DOMElement', __NAMESPACE__ . '\DOMElementSerialize' ) === false)
+                     || ($this->registerNodeClass( '\DOMAttr',    __NAMESPACE__ . '\DOMAttrSerialize'    ) === false)
+                     || ($this->registerNodeClass( '\DOMText',    __NAMESPACE__ . '\DOMTextSerialize'    ) === false)
                 
                 //if that failed, there's really nothing we can do
                 //-- trigger a fatal error and return false
@@ -71,16 +77,16 @@ class DOMDocumentSerialize
                 );
                 
                 //create the DOMXPath object to be able to do XPath queries
-                $this->xquery = new DOMXpath( $this );
+                $this->xquery = new \DOMXpath( $this );
         }
         
         /**
-         * Creates a new document by deserializing a string into XML
+         * Creates a new document by deserializing a string into XML.
          *
          * This is a static method so that you won't need to instantiate a class beforehand;
          * For example:
          *
-         *      $document = DOMDocumentSerialize::deserialize( '<a @href # : Click Here >' );
+         *      $document = kroc\domserialize\DOMDocumentSerialize::deserialize( '<a @href # : Click Here >' );
          *
          * @param       string  $serialized_text        A string containing previously serialized XML
          * @param       string  $root_node              A DOMDocument may have only one root element, but the serialized
@@ -95,7 +101,7 @@ class DOMDocumentSerialize
         public static function deserialize ($serialized_text, $root_node = 'DOMDocumentSerialize')
         {
                 //basic validation. an empty `$serialized_text` is valid,
-                # and an empty (though with root node) document will be returned
+                //and an empty (though with root node) document will be returned
                 if (!is_string( $serialized_text )) throw new \InvalidArgumentException (
                         '`$serialized_text` parameter must be a string'
                 );
@@ -104,7 +110,7 @@ class DOMDocumentSerialize
                 );
                 
                 //create a new, empty document to begin with
-                $document = new DOMDocumentSerialize();
+                $document = new namespace\DOMDocumentSerialize();
                 
                 //XML documents *must* have only one root element, i.e. `<a>1</a><b>2</b>` would be invalid.
                 //we provide our own so that [de]serialized strings do not have to worry about this
@@ -123,11 +129,13 @@ class DOMDocumentSerialize
         }
         
         /**
+         * Convert the Document (sans wrapping root-node) to a serialized XML string
+         *
          * @return      string
          */
         public function serialize ()
         {
-                return ($this->documentElement->hasChildNodes)
+                return ($this->documentElement->hasChildNodes())
                         ? self::serializeDOMNodeList( $this->documentElement->childNodes )
                         : ''
                 ;
@@ -143,12 +151,12 @@ class DOMDocumentSerialize
                 foreach ($DOMNodeList as $node)
                         $serialized_text .= $node->nodeSerialize()
                 ;
-                return $serialized_text;
+                return trim( $serialized_text );
         }
 }
 
 class DOMElementSerialize
-        extends DOMElement
+        extends \DOMElement
 {
         /**
          * Convert the current DOMElement and all its children into a serialized XML string
@@ -187,7 +195,7 @@ class DOMElementSerialize
                 ) {
                         //serializing the attribute node doesn't tell us if it had a value or not...
                         $nodeSerialize .= ' ' . $this->attributes->item( $i )->nodeSerialize ();
-                        /* here we check for the last attribute and if it has a value and add a final space,
+                        /* here we check for the last attribute and if it has a value and add a final space.
                          * this isn't necessary if the element has content as that will add a space too */
                         if (    $i == $this->attributes->length - 1
                              && !$this->hasChildNodes()
@@ -203,7 +211,9 @@ class DOMElementSerialize
                         
                         foreach ($this->childNodes as $child) if (!empty(
                                 trim( $text = $child->nodeSerialize() )
-                        )) $nodeSerialize .= "$text";
+                        )) $nodeSerialize .= $text;
+                        
+                        $nodeSerialize .= ' ';
                 }
                 
                 //close the element
@@ -211,7 +221,10 @@ class DOMElementSerialize
         }
         
         /**
+         * Builds XML nodes (as children of the context node) from a serialized-XML string
+         *
          * @param       string  $serialized_xml
+         * @throws      \InvalidArgumentException
          */
         public function deserialize ($serialized_xml)
         {
@@ -334,7 +347,7 @@ class DOMElementSerialize
         }
         
         /**
-         * Take the attributes and namespaces portion of a serialized-xml string and create the relevent DOMNodes
+         * Take the attributes and namespaces portion of a serialized-XML string and create the relevent DOMNodes
          *
          * @param       string  $serialized_attrs
          * @throws      \InvalidArgumentException
@@ -395,7 +408,7 @@ class DOMElementSerialize
 }
 
 class DOMAttrSerialize
-        extends DOMAttr
+        extends \DOMAttr
 {
         /**
          * @return      string
@@ -404,7 +417,7 @@ class DOMAttrSerialize
         {
                 $nodeSerialize = '@' . $this->nodeName;
                 
-                if (!empty( $text = $this->textContent )) {
+                if (!empty( $text = trim( $this->textContent ))) {
                         $text = htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
                         /** @todo non-space whitespace?? */
                         $nodeSerialize .= (strpos( $text, ' ' ) !== FALSE) ? " '$text'" : " $text";
@@ -414,15 +427,18 @@ class DOMAttrSerialize
         }
 }
 
+/**
+ * Our version of PHP's DOMText class that represents text nodes in a document
+ */
 class DOMTextSerialize
-        extends DOMText
+        extends \DOMText
 {
         /**
          * @return      string
          */
         public function nodeSerialize ()
         {
-                return trim( htmlspecialchars( $this->textContent, ENT_QUOTES, 'UTF-8' )) . ' ';
+                return trim( htmlspecialchars( $this->textContent, ENT_QUOTES, 'UTF-8' ));
         }
 }
 
